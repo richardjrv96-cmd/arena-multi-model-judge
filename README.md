@@ -1,107 +1,76 @@
 # Arena
 
-A minimalist multi-model comparator powered by [OpenRouter](https://openrouter.ai).
-Write one prompt, pick several AI models, and watch them answer **side by side, streaming
-in real time**. Then anonymize the responses (A, B, C…) and let a panel of **blind judges**
-score them on a standard evaluation rubric.
+**A multi-model LLM comparison tool with blind, rubric-based judging.**
 
-- **Parallel live streaming** — each model answers in its own column, token by token.
-- **Free + premium models, one key** — free `:free` models (Llama, Qwen, Gemma…) and
-  premium ones (GPT‑4o, Claude, Grok…) all run through the same OpenRouter API key.
-- **Blind judging** — 1–3 judge models score every anonymized answer on a standard
-  evaluation rubric (Accuracy, Reasoning, Completeness, Clarity, Safety; 0–10 each),
-  producing a ranked leaderboard, an **agreement** metric (with 2+ judges), and a
-  highlighted winner.
-- **Key never touches the browser** — every OpenRouter call goes through a Next.js API
-  route (`app/api/chat`, `app/api/judge`). The `OPENROUTER_API_KEY` is read server‑side
-  only; `lib/openrouter.ts` is marked `import "server-only"` so the build fails if it is
-  ever pulled into client code.
+Arena lets you send one prompt to several large language models at once and compare their
+answers side by side, streaming in real time. Once the responses are in, a panel of judge
+models scores them blind — the answers are anonymized first — and Arena aggregates those
+scores into a ranking with an inter-judge agreement metric. It's a fast, honest way to see
+how different models actually stack up on a given task.
 
-## Architecture
+**Live demo:** [arena-multi-model-judge.vercel.app](https://arena-multi-model-judge.vercel.app)
 
-```
-app/
-  page.tsx              UI orchestrator (client): prompt, columns, judging
-  api/chat/route.ts     streaming proxy → OpenRouter (one model per request, SSE)
-  api/judge/route.ts    blind judge → strict rubric JSON
-components/             PromptBar, ModelPicker, ResponseColumn, JudgePanel, Leaderboard, ModelIcon
-lib/
-  models.ts             ← THE model registry. Edit this to add/remove models.
-  openrouter.ts         server-only OpenRouter client (reads the API key)
-  rubric.ts             scoring, ranking, and agreement math
-  stream-client.ts      browser-side SSE reader + anonymization helpers
-  types.ts              shared types
-```
+## Screenshots
 
-### Editing the model list
+![Side-by-side model comparison with real-time streaming](./screenshots/comparison.png)
+*Send one prompt to multiple models and watch them answer in parallel, token by token.*
 
-All models live in [`lib/models.ts`](lib/models.ts). Each entry is
-`{ slug, label, provider, tier }` where `slug` is the exact OpenRouter model id from
-<https://openrouter.ai/models>. Set `defaultSelected` to pre‑tick a model for comparison
-and `defaultJudge` to pre‑tick it as a judge. OpenRouter's free catalog changes often — if
-a `:free` slug stops working, swap it for a current one from that page.
+![Blind judging leaderboard with rubric scores and agreement](./screenshots/leaderboard.png)
+*Blind judges score each anonymized answer; results are ranked with per-criterion breakdowns and an agreement metric.*
 
-## Run it locally
+## Features
 
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
-2. **Add your OpenRouter key.** Get one at <https://openrouter.ai/keys>, then:
-   ```bash
-   cp .env.example .env.local
-   ```
-   Open `.env.local` and set `OPENROUTER_API_KEY=sk-or-...`
-3. **Start the dev server**
-   ```bash
-   npm run dev
-   ```
-   Open <http://localhost:3000>, write a prompt, pick a few models, and hit **Compare**
-   (or ⌘/Ctrl + Enter). After responses finish, choose judges and hit **Judge blind**.
+- **Real-time parallel streaming** — every selected model answers simultaneously, each in its own column, token by token.
+- **One key, every provider** — a single OpenRouter API key powers both free (`:free`) and premium models across providers.
+- **Blind judging** — responses are anonymized (A, B, C…) before scoring, so judges can't favor a particular model by name (avoids self-preference bias).
+- **Standard 5-criterion rubric** — each answer is scored 0–10 on Accuracy, Reasoning, Completeness, Clarity, and Safety (0–50 total).
+- **Multi-judge agreement** — with two or more judges, Arena reports how often they agree on the winner.
+- **Automatic retry with backoff** — transient rate limits (HTTP 429) and provider errors are retried with exponential backoff before surfacing a failure.
+- **Server-side API key** — all OpenRouter calls go through a Next.js API route; the key never reaches the browser.
 
----
+## Tech stack
 
-## Deploy: GitHub → Vercel
+- **Next.js** (App Router)
+- **TypeScript**
+- **Tailwind CSS**
+- **OpenRouter API** for unified model access
+- Deployed on **Vercel**
 
-### 1 · Create a new GitHub repo and push
+## How it works
 
-Create an **empty** repo at <https://github.com/new> (no README/.gitignore — this project
-already has them). Then, from the project folder:
+The client fires parallel requests to a Next.js API route that proxies OpenRouter with
+streaming enabled, relaying tokens back over Server-Sent Events — so the `OPENROUTER_API_KEY`
+lives only on the server and is never exposed to the client. After the comparison finishes,
+the judge route anonymizes the responses and asks each judge model to return structured JSON
+scores for the five rubric criteria. Those scores are aggregated into an average-based ranking,
+a highlighted winner, and an agreement metric across judges. Rate-limited or failing calls are
+retried automatically with backoff before any error is shown.
+
+## Run locally
 
 ```bash
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git branch -M main
-git push -u origin main
+# 1. Clone
+git clone https://github.com/richardjrv96-cmd/arena-multi-model-judge.git
+cd arena-multi-model-judge
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure your key
+cp .env.example .env.local
+# then edit .env.local and set OPENROUTER_API_KEY=sk-or-...
+# (get a key at https://openrouter.ai/keys)
+
+# 4. Run
+npm run dev
 ```
 
-> The first commit is already made for you (see below). `.env.local` is gitignored, so your
-> key is **not** pushed.
+Open [http://localhost:3000](http://localhost:3000), write a prompt, pick a few models, and
+hit **Compare**. When the responses finish, choose your judges and run **Judge blind**.
 
-### 2 · Import the project into Vercel
+## Notes
 
-1. Go to <https://vercel.com/new>.
-2. Click **Import** next to your new GitHub repo (authorize Vercel for GitHub if asked).
-3. Vercel auto-detects **Next.js** — leave Framework Preset, Build Command, and Output
-   Directory at their defaults.
-
-### 3 · Add the `OPENROUTER_API_KEY` environment variable (exact location)
-
-**Before** clicking Deploy, on that same import screen:
-
-1. Expand the **“Environment Variables”** section.
-2. **Key:** `OPENROUTER_API_KEY`  **Value:** your `sk-or-...` key.
-3. Leave all three environments (Production, Preview, Development) checked → **Add**.
-
-> Already deployed and forgot? Add it later at:
-> **Vercel Dashboard → your project → Settings → Environment Variables → Add New**,
-> name it `OPENROUTER_API_KEY`, paste the value, save, then **Deployments → ⋯ → Redeploy**
-> so the new variable is picked up.
-
-### 4 · Deploy
-
-Click **Deploy**. When it finishes, open the generated URL — Arena is live.
-
----
-
-Built with Next.js (App Router) + Tailwind CSS. The accent color lives in one place
-(`--accent` in `app/globals.css`) if you want to re-skin it.
+Free-tier models are convenient for trying Arena out, but they share limited capacity on
+OpenRouter and can be rate-limited or temporarily unavailable. Arena retries automatically,
+but for consistent results, premium models accessed through your own OpenRouter key are
+considerably more reliable.
