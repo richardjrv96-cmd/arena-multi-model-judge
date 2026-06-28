@@ -24,33 +24,51 @@ import type { Model } from "./types";
 
 export const MODELS: Model[] = [
   // ── Free tier (no cost) ──────────────────────────────────────────────────
-  {
-    slug: "meta-llama/llama-3.3-70b-instruct:free",
-    label: "Llama 3.3 70B",
-    provider: "meta",
-    tier: "free",
-    defaultSelected: true,
-  },
-  {
-    slug: "qwen/qwen3-next-80b-a3b-instruct:free",
-    label: "Qwen3 Next 80B",
-    provider: "qwen",
-    tier: "free",
-    defaultSelected: true,
-  },
-  {
-    slug: "google/gemma-4-31b-it:free",
-    label: "Gemma 4 31B",
-    provider: "google",
-    tier: "free",
-    defaultSelected: true,
-  },
+  // NOTE: a slug being present in OpenRouter's catalog does NOT guarantee its
+  // free endpoint is serving — large free models are frequently rate-limited or
+  // have "no available provider instances", which surfaces as a provider error.
+  // The models below were chosen for healthier free endpoints; if one starts
+  // failing, the in-app error now shows the real reason and you can swap it for
+  // another ":free" id from https://openrouter.ai/models
   {
     slug: "openai/gpt-oss-120b:free",
     label: "GPT-OSS 120B",
     provider: "openai",
     tier: "free",
+    defaultSelected: true,
     defaultJudge: true,
+  },
+  {
+    slug: "nvidia/nemotron-3-super-120b-a12b:free",
+    label: "Nemotron 3 Super",
+    provider: "nvidia",
+    tier: "free",
+    defaultSelected: true,
+  },
+  {
+    slug: "meta-llama/llama-3.2-3b-instruct:free",
+    label: "Llama 3.2 3B",
+    provider: "meta",
+    tier: "free",
+    defaultSelected: true,
+  },
+  {
+    slug: "qwen/qwen3-coder:free",
+    label: "Qwen3 Coder",
+    provider: "qwen",
+    tier: "free",
+  },
+  {
+    slug: "google/gemma-4-26b-a4b-it:free",
+    label: "Gemma 4 26B",
+    provider: "google",
+    tier: "free",
+  },
+  {
+    slug: "openai/gpt-oss-20b:free",
+    label: "GPT-OSS 20B",
+    provider: "openai",
+    tier: "free",
   },
 
   // ── Premium tier (same API key, billed per token) ────────────────────────

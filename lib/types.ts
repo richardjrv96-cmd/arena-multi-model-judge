@@ -10,7 +10,8 @@ export type Provider =
   | "deepseek"
   | "qwen"
   | "mistral"
-  | "xai";
+  | "xai"
+  | "nvidia";
 
 export interface Model {
   /** OpenRouter model id, e.g. "openai/gpt-4o" or "google/gemini-2.0-flash-exp:free". */

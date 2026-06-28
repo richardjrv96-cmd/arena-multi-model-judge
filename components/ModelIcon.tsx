@@ -78,6 +78,13 @@ const ICONS: Record<Provider, React.ReactNode> = {
       <path d="M6 6l12 12M18 6 6 18" />
     </Frame>
   ),
+  // NVIDIA — the spark/eye mark
+  nvidia: (
+    <Frame>
+      <path d="M5 12c3-4 11-4 14 0-3 4-11 4-14 0Z" />
+      <path d="M12 9.5a2.5 2.5 0 1 0 0 5 4 4 0 0 1 0-5Z" fill="currentColor" stroke="none" />
+    </Frame>
+  ),
 };
 
 export function ModelIcon({

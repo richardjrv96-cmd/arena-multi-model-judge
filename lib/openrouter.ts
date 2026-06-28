@@ -34,6 +34,43 @@ export class OpenRouterError extends Error {
   }
 }
 
+/**
+ * Turn an OpenRouter error payload into a human-readable string.
+ *
+ * OpenRouter errors look like:
+ *   { error: { code, message, metadata: { provider_name, raw } } }
+ * and can arrive either as a non-200 body OR as a frame inside a 200 SSE
+ * stream (e.g. the dreaded generic "Provider returned error"). This pulls out
+ * the underlying provider name and raw upstream message so failures are
+ * actually diagnosable instead of opaque.
+ */
+export function formatOpenRouterError(
+  input: unknown,
+  fallback = "Provider error",
+): string {
+  if (!input) return fallback;
+  if (typeof input === "string") return input;
+
+  const obj = input as Record<string, unknown>;
+  // Accept either the error object itself or a wrapper { error: {...} }.
+  const err = (obj.error ?? obj) as Record<string, unknown>;
+
+  const message =
+    (typeof err.message === "string" && err.message) || fallback;
+  const code = err.code;
+  const meta = err.metadata as Record<string, unknown> | undefined;
+
+  let extra = "";
+  if (meta?.provider_name) extra += ` [provider: ${meta.provider_name}]`;
+  if (meta?.raw != null) {
+    const raw =
+      typeof meta.raw === "string" ? meta.raw : JSON.stringify(meta.raw);
+    if (raw && raw !== message) extra += ` — ${raw.slice(0, 300)}`;
+  }
+
+  return `${message}${code != null ? ` (code ${code})` : ""}${extra}`;
+}
+
 function apiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
@@ -83,7 +120,7 @@ export async function callOpenRouter(opts: CallOptions): Promise<Response> {
     let detail = `${res.status} ${res.statusText}`;
     try {
       const body = await res.json();
-      detail = body?.error?.message ?? body?.message ?? detail;
+      detail = formatOpenRouterError(body, detail);
     } catch {
       // body wasn't JSON; keep the status line
     }
@@ -99,5 +136,9 @@ export async function completeText(
 ): Promise<string> {
   const res = await callOpenRouter({ ...opts, stream: false });
   const data = await res.json();
+  // OpenRouter can answer 200 with an embedded error and no choices.
+  if (data?.error) {
+    throw new OpenRouterError(formatOpenRouterError(data), 502);
+  }
   return data?.choices?.[0]?.message?.content ?? "";
 }

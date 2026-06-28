@@ -1,4 +1,8 @@
-import { callOpenRouter, OpenRouterError } from "@/lib/openrouter";
+import {
+  callOpenRouter,
+  formatOpenRouterError,
+  OpenRouterError,
+} from "@/lib/openrouter";
 import { getModel } from "@/lib/models";
 
 export const runtime = "nodejs";
@@ -61,9 +65,12 @@ export async function POST(req: Request) {
         const reader = upstream.body!.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let streamErrored = false;
 
         // Parse OpenRouter's SSE stream and re-emit only the text deltas.
-        while (true) {
+        // Note: OpenRouter often returns HTTP 200 and then reports provider
+        // failures as an error frame *inside* the stream — detect those.
+        outer: while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
@@ -78,6 +85,13 @@ export async function POST(req: Request) {
             if (payload === "" || payload === "[DONE]") continue;
             try {
               const json = JSON.parse(payload);
+              if (json.error) {
+                controller.enqueue(
+                  send({ error: formatOpenRouterError(json.error) }),
+                );
+                streamErrored = true;
+                break outer;
+              }
               const delta = json?.choices?.[0]?.delta?.content;
               if (delta) controller.enqueue(send({ delta }));
             } catch {
@@ -86,7 +100,9 @@ export async function POST(req: Request) {
           }
         }
 
-        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        if (!streamErrored) {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        }
       } catch (err) {
         const message =
           err instanceof OpenRouterError
