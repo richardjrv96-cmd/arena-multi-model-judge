@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { MODELS, getModel, DEFAULT_SELECTED, DEFAULT_JUDGES } from "@/lib/models";
-import { buildLeaderboard, type Leaderboard as LeaderboardData } from "@/lib/sound";
+import { buildLeaderboard, type Leaderboard as LeaderboardData } from "@/lib/rubric";
 import type { JudgeVerdict } from "@/lib/types";
 import { streamChat, shuffle, labelFor } from "@/lib/stream-client";
 import { PromptBar } from "@/components/PromptBar";
@@ -303,8 +303,8 @@ export default function Home() {
         <div className="mt-16 flex flex-1 items-center justify-center pb-20">
           <p className="max-w-md text-center text-sm leading-relaxed text-faint">
             Write a prompt, pick a few models, and watch them answer side by side
-            in real time. Then let a panel of blind judges score them on the{" "}
-            <span className="text-muted">S.O.U.N.D.</span> rubric.
+            in real time. Then let a panel of blind judges score them on a{" "}
+            <span className="text-muted">standard</span> rubric.
           </p>
         </div>
       )}

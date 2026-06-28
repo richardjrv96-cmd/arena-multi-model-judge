@@ -3,13 +3,13 @@
 A minimalist multi-model comparator powered by [OpenRouter](https://openrouter.ai).
 Write one prompt, pick several AI models, and watch them answer **side by side, streaming
 in real time**. Then anonymize the responses (A, B, C…) and let a panel of **blind judges**
-score them on the **S.O.U.N.D.** rubric.
+score them on a standard evaluation rubric.
 
 - **Parallel live streaming** — each model answers in its own column, token by token.
 - **Free + premium models, one key** — free `:free` models (Llama, Qwen, Gemma…) and
   premium ones (GPT‑4o, Claude, Grok…) all run through the same OpenRouter API key.
-- **Blind judging** — 1–3 judge models score every anonymized answer on the five
-  S.O.U.N.D. dimensions (Substance, Objectivity, Usefulness, Nuance, Delivery; 0–10 each),
+- **Blind judging** — 1–3 judge models score every anonymized answer on a standard
+  evaluation rubric (Accuracy, Reasoning, Completeness, Clarity, Safety; 0–10 each),
   producing a ranked leaderboard, an **agreement** metric (with 2+ judges), and a
   highlighted winner.
 - **Key never touches the browser** — every OpenRouter call goes through a Next.js API
@@ -23,12 +23,12 @@ score them on the **S.O.U.N.D.** rubric.
 app/
   page.tsx              UI orchestrator (client): prompt, columns, judging
   api/chat/route.ts     streaming proxy → OpenRouter (one model per request, SSE)
-  api/judge/route.ts    blind judge → strict S.O.U.N.D. JSON
+  api/judge/route.ts    blind judge → strict rubric JSON
 components/             PromptBar, ModelPicker, ResponseColumn, JudgePanel, Leaderboard, ModelIcon
 lib/
   models.ts             ← THE model registry. Edit this to add/remove models.
   openrouter.ts         server-only OpenRouter client (reads the API key)
-  sound.ts              scoring, ranking, and agreement math
+  rubric.ts             scoring, ranking, and agreement math
   stream-client.ts      browser-side SSE reader + anonymization helpers
   types.ts              shared types
 ```

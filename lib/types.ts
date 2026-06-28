@@ -27,28 +27,28 @@ export interface Model {
   defaultJudge?: boolean;
 }
 
-/** The five S.O.U.N.D. rubric dimensions, each scored 0–10. */
-export interface SoundScore {
-  substance: number;
-  objectivity: number;
-  usefulness: number;
-  nuance: number;
-  delivery: number;
+/** The five rubric dimensions, each scored 0–10. */
+export interface RubricScore {
+  accuracy: number;
+  reasoning: number;
+  completeness: number;
+  clarity: number;
+  safety: number;
 }
 
-export const SOUND_DIMENSIONS = [
-  { key: "substance", letter: "S", label: "Substance" },
-  { key: "objectivity", letter: "O", label: "Objectivity" },
-  { key: "usefulness", letter: "U", label: "Usefulness" },
-  { key: "nuance", letter: "N", label: "Nuance" },
-  { key: "delivery", letter: "D", label: "Delivery" },
+export const RUBRIC_DIMENSIONS = [
+  { key: "accuracy", short: "Acc", label: "Accuracy" },
+  { key: "reasoning", short: "Rea", label: "Reasoning" },
+  { key: "completeness", short: "Cmp", label: "Completeness" },
+  { key: "clarity", short: "Clr", label: "Clarity" },
+  { key: "safety", short: "Saf", label: "Safety" },
 ] as const;
 
 /** One judge's score for one anonymized answer. */
 export interface AnswerScore {
   /** Anonymized label: "A", "B", "C", ... */
   label: string;
-  scores: SoundScore;
+  scores: RubricScore;
   /** Optional one-line rationale from the judge. */
   comment?: string;
 }

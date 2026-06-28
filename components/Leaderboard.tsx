@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Leaderboard as LeaderboardData, RankedAnswer } from "@/lib/sound";
-import { SOUND_DIMENSIONS } from "@/lib/types";
+import type { Leaderboard as LeaderboardData, RankedAnswer } from "@/lib/rubric";
+import { RUBRIC_DIMENSIONS } from "@/lib/types";
 import { getModel, modelLabel } from "@/lib/models";
 import { ModelIcon } from "./ModelIcon";
 
@@ -114,9 +114,9 @@ function Row({
         </button>
       </div>
 
-      {/* S.O.U.N.D. breakdown bars */}
+      {/* Rubric breakdown bars */}
       <div className="mt-3 grid grid-cols-5 gap-2 pl-10">
-        {SOUND_DIMENSIONS.map((d) => {
+        {RUBRIC_DIMENSIONS.map((d) => {
           const v = answer.meanScores[d.key];
           return (
             <div key={d.key} className="flex flex-col gap-1">
@@ -125,7 +125,7 @@ function Row({
                   className="font-mono text-[11px] text-faint"
                   title={d.label}
                 >
-                  {d.letter}
+                  {d.short}
                 </span>
                 <span className="font-mono text-[11px] text-muted">
                   {v.toFixed(1)}

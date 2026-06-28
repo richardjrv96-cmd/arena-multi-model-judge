@@ -1,10 +1,8 @@
-import type { JudgeVerdict, SoundScore } from "./types";
+import type { JudgeVerdict, RubricScore } from "./types";
 
-/** Sum of the five S.O.U.N.D. dimensions for one answer → 0–50. */
-export function soundTotal(s: SoundScore): number {
-  return (
-    s.substance + s.objectivity + s.usefulness + s.nuance + s.delivery
-  );
+/** Sum of the five rubric dimensions for one answer → 0–50. */
+export function rubricTotal(s: RubricScore): number {
+  return s.accuracy + s.reasoning + s.completeness + s.clarity + s.safety;
 }
 
 /** Clamp a value into [0, 10] and coerce non-numbers to 0. */
@@ -19,8 +17,8 @@ export interface RankedAnswer {
   label: string;
   /** Real model slug, revealed after judging. */
   slug: string;
-  /** Mean S.O.U.N.D. dimensions averaged across all judges (each 0–10). */
-  meanScores: SoundScore;
+  /** Mean rubric dimensions averaged across all judges (each 0–10). */
+  meanScores: RubricScore;
   /** Mean total across judges (0–50). */
   meanTotal: number;
   /** Per-judge totals for this answer (parallel to the judges array). */
@@ -39,12 +37,12 @@ export interface Leaderboard {
   judgeSlugs: string[];
 }
 
-const ZERO: SoundScore = {
-  substance: 0,
-  objectivity: 0,
-  usefulness: 0,
-  nuance: 0,
-  delivery: 0,
+const ZERO: RubricScore = {
+  accuracy: 0,
+  reasoning: 0,
+  completeness: 0,
+  clarity: 0,
+  safety: 0,
 };
 
 /**
@@ -61,7 +59,7 @@ export function buildLeaderboard(
   const labels = Object.keys(labelToSlug);
 
   const ranked: RankedAnswer[] = labels.map((label) => {
-    const sum: SoundScore = { ...ZERO };
+    const sum: RubricScore = { ...ZERO };
     const perJudgeTotal: number[] = [];
     const comments: { judgeSlug: string; comment: string }[] = [];
     let counted = 0;
@@ -72,30 +70,30 @@ export function buildLeaderboard(
         perJudgeTotal.push(0);
         continue;
       }
-      sum.substance += a.scores.substance;
-      sum.objectivity += a.scores.objectivity;
-      sum.usefulness += a.scores.usefulness;
-      sum.nuance += a.scores.nuance;
-      sum.delivery += a.scores.delivery;
-      perJudgeTotal.push(soundTotal(a.scores));
+      sum.accuracy += a.scores.accuracy;
+      sum.reasoning += a.scores.reasoning;
+      sum.completeness += a.scores.completeness;
+      sum.clarity += a.scores.clarity;
+      sum.safety += a.scores.safety;
+      perJudgeTotal.push(rubricTotal(a.scores));
       if (a.comment) comments.push({ judgeSlug: v.judgeSlug, comment: a.comment });
       counted++;
     }
 
     const n = Math.max(1, counted);
-    const meanScores: SoundScore = {
-      substance: sum.substance / n,
-      objectivity: sum.objectivity / n,
-      usefulness: sum.usefulness / n,
-      nuance: sum.nuance / n,
-      delivery: sum.delivery / n,
+    const meanScores: RubricScore = {
+      accuracy: sum.accuracy / n,
+      reasoning: sum.reasoning / n,
+      completeness: sum.completeness / n,
+      clarity: sum.clarity / n,
+      safety: sum.safety / n,
     };
 
     return {
       label,
       slug: labelToSlug[label],
       meanScores,
-      meanTotal: soundTotal(meanScores),
+      meanTotal: rubricTotal(meanScores),
       perJudgeTotal,
       rank: 0,
       comments,
@@ -133,7 +131,7 @@ function computeAgreement(
     let bestLabel: string | null = null;
     let bestTotal = -Infinity;
     for (const a of v.scores) {
-      const t = soundTotal(a.scores);
+      const t = rubricTotal(a.scores);
       if (t > bestTotal) {
         bestTotal = t;
         bestLabel = a.label;

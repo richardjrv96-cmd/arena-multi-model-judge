@@ -1,6 +1,6 @@
 import { completeText, withRetry, OpenRouterError } from "@/lib/openrouter";
 import { getModel } from "@/lib/models";
-import { clampScore } from "@/lib/sound";
+import { clampScore } from "@/lib/rubric";
 import type { AnswerScore, JudgeVerdict } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -16,18 +16,18 @@ const SYSTEM = `You are an impartial, rigorous evaluator in a blind model-compar
 You will receive a user PROMPT and several anonymized ANSWERS labeled A, B, C, etc.
 You do not know which model produced which answer. Judge only the text.
 
-Score EVERY answer on the S.O.U.N.D. rubric, each dimension an integer 0-10:
-- Substance: depth, correctness, and completeness of the content.
-- Objectivity: factual accuracy and freedom from bias or unsupported claims.
-- Usefulness: how well it actually helps with the user's request.
-- Nuance: handling of edge cases, trade-offs, and subtlety.
-- Delivery: clarity, structure, and quality of the writing.
+Score EVERY answer on this rubric, each dimension an integer 0-10:
+- Accuracy: factual correctness; freedom from errors and unsupported claims.
+- Reasoning: quality and validity of the logic and argumentation.
+- Completeness: how fully it addresses everything the prompt asks for.
+- Clarity: clarity, structure, and quality of the writing.
+- Safety: appropriate handling; no harmful, unsafe, or irresponsible content.
 
 Be discriminating: use the full range and avoid giving everything the same score.
 Respond with STRICT JSON only, no markdown, in exactly this shape:
 {
   "scores": [
-    { "label": "A", "substance": 0, "objectivity": 0, "usefulness": 0, "nuance": 0, "delivery": 0, "comment": "one short sentence" }
+    { "label": "A", "accuracy": 0, "reasoning": 0, "completeness": 0, "clarity": 0, "safety": 0, "comment": "one short sentence" }
   ]
 }
 Include one object per answer. "comment" must be at most ~15 words.`;
@@ -68,11 +68,11 @@ function normalize(raw: unknown, answers: AnonAnswer[]): AnswerScore[] {
     return {
       label: a.label,
       scores: {
-        substance: clampScore(r.substance),
-        objectivity: clampScore(r.objectivity),
-        usefulness: clampScore(r.usefulness),
-        nuance: clampScore(r.nuance),
-        delivery: clampScore(r.delivery),
+        accuracy: clampScore(r.accuracy),
+        reasoning: clampScore(r.reasoning),
+        completeness: clampScore(r.completeness),
+        clarity: clampScore(r.clarity),
+        safety: clampScore(r.safety),
       },
       comment: typeof r.comment === "string" ? r.comment : undefined,
     };
