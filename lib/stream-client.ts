@@ -1,9 +1,16 @@
 // Client-side helper to consume the SSE stream from /api/chat.
 // (No "server-only" here — this runs in the browser. It never touches the API key.)
 
+export interface RetryInfo {
+  attempt: number;
+  of: number;
+  reason: string;
+}
+
 export interface StreamHandlers {
   onDelta: (text: string) => void;
   onError: (message: string) => void;
+  onRetry: (info: RetryInfo) => void;
   onDone: () => void;
 }
 
@@ -67,6 +74,10 @@ export async function streamChat(
           if (json.error) {
             handlers.onError(json.error);
             return;
+          }
+          if (json.retry) {
+            handlers.onRetry(json.retry as RetryInfo);
+            continue;
           }
           if (json.delta) handlers.onDelta(json.delta);
         } catch {

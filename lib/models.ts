@@ -30,6 +30,12 @@ export const MODELS: Model[] = [
   // The models below were chosen for healthier free endpoints; if one starts
   // failing, the in-app error now shows the real reason and you can swap it for
   // another ":free" id from https://openrouter.ai/models
+  // Stable picks first (pre-selected). The heaviest/most popular free models
+  // (e.g. Nemotron Super 120B, Qwen3 Coder 480B) saturate fastest and 429 most,
+  // so we favor smaller / lighter-active variants here. Automatic retries on the
+  // server (see lib/openrouter withRetry) smooth over transient rate limits.
+  // Other low-traffic free options you can swap in if needed (need new icons):
+  //   cohere/north-mini-code:free · liquid/lfm-2.5-1.2b-instruct:free
   {
     slug: "openai/gpt-oss-120b:free",
     label: "GPT-OSS 120B",
@@ -39,9 +45,9 @@ export const MODELS: Model[] = [
     defaultJudge: true,
   },
   {
-    slug: "nvidia/nemotron-3-super-120b-a12b:free",
-    label: "Nemotron 3 Super",
-    provider: "nvidia",
+    slug: "openai/gpt-oss-20b:free",
+    label: "GPT-OSS 20B",
+    provider: "openai",
     tier: "free",
     defaultSelected: true,
   },
@@ -53,8 +59,14 @@ export const MODELS: Model[] = [
     defaultSelected: true,
   },
   {
-    slug: "qwen/qwen3-coder:free",
-    label: "Qwen3 Coder",
+    slug: "nvidia/nemotron-nano-9b-v2:free",
+    label: "Nemotron Nano 9B",
+    provider: "nvidia",
+    tier: "free",
+  },
+  {
+    slug: "qwen/qwen3-next-80b-a3b-instruct:free",
+    label: "Qwen3 Next 80B",
     provider: "qwen",
     tier: "free",
   },
@@ -62,12 +74,6 @@ export const MODELS: Model[] = [
     slug: "google/gemma-4-26b-a4b-it:free",
     label: "Gemma 4 26B",
     provider: "google",
-    tier: "free",
-  },
-  {
-    slug: "openai/gpt-oss-20b:free",
-    label: "GPT-OSS 20B",
-    provider: "openai",
     tier: "free",
   },
 

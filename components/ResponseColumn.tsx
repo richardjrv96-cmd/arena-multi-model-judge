@@ -4,12 +4,19 @@ import { useEffect, useRef } from "react";
 import type { Model } from "@/lib/types";
 import { ModelIcon } from "./ModelIcon";
 
-export type RunStatus = "pending" | "streaming" | "done" | "error";
+export type RunStatus =
+  | "pending"
+  | "streaming"
+  | "retrying"
+  | "done"
+  | "error";
 
 export interface Run {
   text: string;
   status: RunStatus;
   error?: string;
+  /** Set while status === "retrying". */
+  retry?: { attempt: number; of: number };
 }
 
 export interface ColumnVerdict {
@@ -84,6 +91,13 @@ export function ResponseColumn({
       >
         {run.status === "error" ? (
           <p className="text-sm text-red-400">{run.error ?? "Something went wrong."}</p>
+        ) : run.status === "retrying" ? (
+          <div className="flex items-center gap-2 text-sm text-accent">
+            <Spinner />
+            <span>
+              Retrying… (attempt {run.retry?.attempt ?? 1}/{run.retry?.of ?? 2})
+            </span>
+          </div>
         ) : run.text ? (
           <p className={`whitespace-pre-wrap ${run.status === "streaming" ? "caret" : ""}`}>
             {run.text}
@@ -95,6 +109,15 @@ export function ResponseColumn({
         )}
       </div>
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-accent/30 border-t-accent"
+      aria-hidden="true"
+    />
   );
 }
 

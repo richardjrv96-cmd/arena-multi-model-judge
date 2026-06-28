@@ -1,4 +1,4 @@
-import { completeText, OpenRouterError } from "@/lib/openrouter";
+import { completeText, withRetry, OpenRouterError } from "@/lib/openrouter";
 import { getModel } from "@/lib/models";
 import { clampScore } from "@/lib/sound";
 import type { AnswerScore, JudgeVerdict } from "@/lib/types";
@@ -110,16 +110,21 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
-    const text = await completeText({
-      model: judgeSlug,
-      jsonMode: true,
-      temperature: 0,
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: buildUserMessage(prompt, answers) },
-      ],
-      signal: req.signal,
-    });
+    // Retry on 429 / transient provider errors with backoff before giving up.
+    const text = await withRetry(
+      () =>
+        completeText({
+          model: judgeSlug,
+          jsonMode: true,
+          temperature: 0,
+          messages: [
+            { role: "system", content: SYSTEM },
+            { role: "user", content: buildUserMessage(prompt, answers) },
+          ],
+          signal: req.signal,
+        }),
+      { signal: req.signal },
+    );
 
     const scores = normalize(extractJson(text), answers);
     const verdict: JudgeVerdict = { judgeSlug, scores };

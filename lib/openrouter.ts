@@ -10,6 +10,13 @@ import "server-only";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+/** Default output cap — keeps responses within what free lanes allow and
+ *  avoids absurd requests (some clients/providers otherwise ask for 65536). */
+export const DEFAULT_MAX_TOKENS = 2000;
+
+/** Backoff schedule (ms) for automatic retries: ~1.5s, then ~3s. */
+export const RETRY_BACKOFF_MS = [1500, 3000];
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -20,6 +27,7 @@ interface CallOptions {
   messages: ChatMessage[];
   stream?: boolean;
   temperature?: number;
+  maxTokens?: number;
   /** Ask the model to return a JSON object (used by judges). */
   jsonMode?: boolean;
   signal?: AbortSignal;
@@ -71,12 +79,76 @@ export function formatOpenRouterError(
   return `${message}${code != null ? ` (code ${code})` : ""}${extra}`;
 }
 
+/** Whether an error is worth retrying: rate limits (429) and transient
+ *  upstream / network failures (>=500). Client errors (4xx) are not. */
+export function isRetryable(err: unknown): boolean {
+  if (err instanceof OpenRouterError) {
+    return err.status === 429 || err.status >= 500;
+  }
+  // Network-level failures (fetch throwing) — but never a deliberate abort.
+  if (err instanceof DOMException && err.name === "AbortError") return false;
+  return err instanceof Error && err.name === "TypeError"; // fetch network error
+}
+
+export function backoffDelay(attempt: number): number {
+  return RETRY_BACKOFF_MS[Math.min(attempt, RETRY_BACKOFF_MS.length - 1)];
+}
+
+const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        reject(new DOMException("Aborted", "AbortError"));
+      },
+      { once: true },
+    );
+  });
+
+/**
+ * Run `fn`, retrying up to RETRY_BACKOFF_MS.length times on retryable errors
+ * with the configured backoff. `onRetry` fires before each wait so callers can
+ * surface a "retrying…" state. Re-throws the last error if all attempts fail.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  opts: {
+    signal?: AbortSignal;
+    onRetry?: (info: { attempt: number; of: number; delayMs: number; reason: string }) => void;
+  } = {},
+): Promise<T> {
+  const maxRetries = RETRY_BACKOFF_MS.length;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt >= maxRetries || !isRetryable(err) || opts.signal?.aborted) {
+        throw err;
+      }
+      const delayMs = backoffDelay(attempt);
+      opts.onRetry?.({
+        attempt: attempt + 1,
+        of: maxRetries,
+        delayMs,
+        reason: err instanceof Error ? err.message : "transient error",
+      });
+      await sleep(delayMs, opts.signal);
+    }
+  }
+  throw lastErr;
+}
+
 function apiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
+    // 401 (not 5xx) so this config error is never treated as retryable.
     throw new OpenRouterError(
       "OPENROUTER_API_KEY is not set on the server. Add it to .env.local (local) or your Vercel project's Environment Variables.",
-      500,
+      401,
     );
   }
   return key;
@@ -111,6 +183,7 @@ export async function callOpenRouter(opts: CallOptions): Promise<Response> {
       messages: opts.messages,
       stream: opts.stream ?? false,
       temperature: opts.temperature,
+      max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
       ...(opts.jsonMode ? { response_format: { type: "json_object" } } : {}),
     }),
     signal: opts.signal,

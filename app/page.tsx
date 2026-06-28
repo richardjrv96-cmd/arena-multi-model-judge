@@ -91,7 +91,14 @@ export default function Home() {
               update(slug, (r) => ({
                 ...r,
                 status: "streaming",
+                retry: undefined,
                 text: r.text + t,
+              })),
+            onRetry: (info) =>
+              update(slug, (r) => ({
+                ...r,
+                status: "retrying",
+                retry: { attempt: info.attempt, of: info.of },
               })),
             onError: (msg) =>
               update(slug, (r) => ({ ...r, status: "error", error: msg })),
